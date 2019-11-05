@@ -38,11 +38,23 @@ class FooLogChecker(logchecker.LogChecker):
     def get_logs(self):
         pattern = re.compile(r'%s' % self.log_date_regex)
         our_logs = []
+        matched = False
         for lline in self.reverse_readline(self.log_location):
             # Extract dates from each line
             match = re.match(pattern, lline)
-            if match:
+            if match or matched:
+                if not match:
+                    # regex didn't match - the line doesnt start with a date.
+                    # this can happend if a log line contains newlines. As we are in the correct date range.
+                    # append it as well
+                    our_logs.append(lline)
+                    continue
+
                 log_date = match.group(1)
+
+                if log_date.rfind(".") == (len(log_date)-3-1):
+                    # log is in miliseconds, add 3 zeros to turn it into micro seconds
+                    log_date = log_date + "000"
                 log_date = datetime.datetime.strptime(
                     log_date, self.log_date_format)
                 # NGINX doesn't give us microsecond level by detail, round down.
@@ -52,6 +64,7 @@ class FooLogChecker(logchecker.LogChecker):
                     ftw_start = self.start
                 ftw_end = self.end
                 if log_date <= ftw_end and log_date >= ftw_start:
+                    matched = True
                     our_logs.append(lline)
                 # If our log is from before FTW started stop
                 if log_date < ftw_start:
