@@ -1,0 +1,54 @@
+admin:
+  access_log_path: /dev/stdout
+  address:
+    socket_address: { address: 127.0.0.1, port_value: 9901 }
+
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 80 }
+    filter_chains:
+    - filters:
+      - name: envoy.http_connection_manager
+        config:
+          http_protocol_options:
+            accept_http_10: true
+            default_host_for_http_10: yuval
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: namespace.local_service
+              domains: ["*"]
+              routes:
+              - match: { prefix: "/" }
+                route: { cluster: somecluster }
+          http_filters:
+          - name: io.solo.filters.http.modsecurity
+            config:
+              regression_logs: true
+              rule_sets:
+              - files:
+                - /owasp-modsecurity-crs/crs-setup.conf.example
+              - rule_str: |
+                             SecRuleEngine On
+                             SecDebugLogLevel 0
+                             SecAction "id:900005,\
+                               phase:1,\
+                               nolog,\
+                               pass,\
+                               ctl:ruleEngine=DetectionOnly,\
+                               ctl:ruleRemoveById=910000,\
+                               setvar:tx.paranoia_level=4,\
+                               setvar:tx.crs_validate_utf8_encoding=1,\
+                               setvar:tx.arg_name_length=100,\
+                               setvar:tx.arg_length=400"
+              - directory: /owasp-modsecurity-crs/rules/
+          - name: envoy.router
+  clusters:
+  - name: somecluster
+    connect_timeout: 0.25s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    hosts: [{ socket_address: { address: 127.0.0.1, port_value: 8080 }}]
