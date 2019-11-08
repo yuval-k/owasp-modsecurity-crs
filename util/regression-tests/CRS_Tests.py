@@ -51,12 +51,12 @@ class FooLogChecker(logchecker.LogChecker):
                     continue
 
                 log_date = match.group(1)
-
-                if log_date.rfind(".") == (len(log_date)-3-1):
-                    # log is in miliseconds, add 3 zeros to turn it into micro seconds
-                    log_date = log_date + "000"
                 log_date = datetime.datetime.strptime(
                     log_date, self.log_date_format)
+                # hack: envoy logs in the container in UTC, so convert log_date to localtime
+                # EST = UTC-5
+                DELTA_TIME = -5
+                log_date = log_date.replace(hour = log_date.hour + DELTA_TIME)
                 # NGINX doesn't give us microsecond level by detail, round down.
                 if "%f" not in self.log_date_format:
                     ftw_start = self.start.replace(microsecond=0)
