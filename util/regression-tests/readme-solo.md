@@ -6,9 +6,8 @@ MAKE sure to set the correct time zone below, or tests will fail!
 
 
 ```
-python -m SimpleHTTPServer 8080 &
 CRS_HOME=/home/yuval/sources/owasp-modsecurity-crs
-reset; docker run --name envoy-crs -d -v /tmp/envoy:/tmp/envoy -v $CRS_HOME:/owasp-modsecurity-crs:ro -w /owasp-modsecurity-crs/rules --net host quay.io/solo-io/envoy-gloo-ee:0.1.26 -c /owasp-modsecurity-crs/util/regression-tests/envoy.yaml -l debug --disable-hot-restart --concurrency 1 --log-path /tmp/envoy/envoy.log --file-flush-interval-msec 1
+reset; docker run --name envoy-crs -d -v /tmp/envoy:/tmp/envoy -v $CRS_HOME:/owasp-modsecurity-crs:ro -w /owasp-modsecurity-crs/rules -p 80:80 quay.io/solo-io/envoy-gloo-ee:0.1.26 -c /owasp-modsecurity-crs/util/regression-tests/envoy.yaml -l debug --disable-hot-restart --concurrency 1 --log-path /tmp/envoy/envoy.log --file-flush-interval-msec 1
 
 # to see what's going on:
 tail -f /tmp/envoy/envoy.log
